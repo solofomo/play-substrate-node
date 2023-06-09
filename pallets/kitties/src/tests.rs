@@ -99,48 +99,46 @@ fn it_works_for_breed() {
 
 #[test]
 fn it_works_for_sale() {
-    assert_eq!(1,1);
-    // new_test_ext().execute_with(|| {
-    //     let seller_id = 1;
-    //     let kitty_id = 0;
-    //     let price = 1000;
+    new_test_ext().execute_with(|| {
+        let seller_id = 1;
+        let kitty_id = 0;
+        let price = 1000;
 
-    //     assert_ok!(KittiesModule::create(RuntimeOrigin::signed(seller_id)));
-    //     assert_ok!(KittiesModule::sale_kitty(RuntimeOrigin::signed(seller_id), kitty_id, price));
-    //     assert_eq!(KittiesModule::kitty_price(kitty_id), Some(price));
+        assert_ok!(KittiesModule::create(RuntimeOrigin::signed(seller_id)));
+        assert_ok!(KittiesModule::sale_kitty(RuntimeOrigin::signed(seller_id), kitty_id, price));
+        assert_eq!(KittiesModule::kitty_price(kitty_id), Some(price));
 
-    //     System::assert_last_event(RuntimeEvent::KittiesModule(Event::KittyForSale {
-    //         seller: seller_id,
-    //         kitty_id: kitty_id,
-    //         price: price,
-    //     }));
-    // });
+        System::assert_last_event(RuntimeEvent::KittiesModule(Event::KittyForSale {
+            seller: seller_id,
+            kitty_id: kitty_id,
+            price: price,
+        }));
+    });
 }
 
 #[test]
 fn it_works_for_buy() {
-    assert_eq!(1,1);
-    // new_test_ext().execute_with(|| {
-    //     let seller_id = 1;
-    //     let buyer_id = 2;
-    //     let kitty_id = 0;
-    //     let price = 1000;
+    new_test_ext().execute_with(|| {
+        let seller_id = 1;
+        let buyer_id = 2;
+        let kitty_id = 0;
+        let price = 1000;
 
-    //     assert_ok!(KittiesModule::create(RuntimeOrigin::signed(seller_id)));
-    //     assert_ok!(KittiesModule::sale_kitty(RuntimeOrigin::signed(seller_id), kitty_id, price));
+        assert_ok!(KittiesModule::create(RuntimeOrigin::signed(seller_id)));
+        assert_ok!(KittiesModule::sale_kitty(RuntimeOrigin::signed(seller_id), kitty_id, price));
 
-    //     // 模拟买家拥有足够的余额
-    //     let _ = Balances::deposit_creating(&buyer_id, price);
-    //     assert_ok!(KittiesModule::buy_kitty(RuntimeOrigin::signed(buyer_id), seller_id, kitty_id, price));
+        // 模拟买家拥有足够的余额
+        let _ = Balances::deposit_creating(&buyer_id, price);
+        assert_ok!(KittiesModule::buy_kitty(RuntimeOrigin::signed(buyer_id), seller_id, kitty_id, price));
 
-    //     assert_eq!(KittiesModule::kitty_price(kitty_id), None);
-    //     assert_eq!(KittiesModule::kitty_owner(kitty_id), Some(buyer_id));
+        assert_eq!(KittiesModule::kitty_price(kitty_id), None);
+        assert_eq!(KittiesModule::kitty_owner(kitty_id), Some(buyer_id));
 
-    //     System::assert_last_event(RuntimeEvent::KittiesModule(Event::KittySold {
-    //         seller: seller_id,
-    //         buyer: buyer_id,
-    //         kitty_id: kitty_id,
-    //         price: price,
-    //     }));
-    // });
+        System::assert_last_event(RuntimeEvent::KittiesModule(Event::KittySold {
+            seller: seller_id,
+            buyer: buyer_id,
+            kitty_id: kitty_id,
+            price: price,
+        }));
+    });
 }
