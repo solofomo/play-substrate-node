@@ -19,7 +19,12 @@ pub mod pallet {
 	pub type KittyId = u32;
 
 	#[derive(Encode, Decode, Clone, Copy, RuntimeDebug, PartialEq, Eq, Default, TypeInfo, MaxEncodedLen)]
-	pub struct Kitty(pub [u8; 16]);
+	pub struct Kitty(
+		pub dna: KittyDna,
+		pub price: Option<Balance>,
+		pub gen: u32,
+		pub name: KittyName,
+	);
 
 	#[pallet::pallet]
 	pub struct Pallet<T>(_);
@@ -50,6 +55,10 @@ pub mod pallet {
 	#[pallet::getter(fn kitty_parents)]
 	pub type KittyParents<T: Config> = StorageMap<_, Blake2_128Concat, KittyId, (KittyId, KittyId), OptionQuery>;
 
+	#[pallet::storage]
+	#[pallet::getter(fn kitty_sales)]
+	pub type KittySales<T: Config> = StorageMap<_, Blake2_128Concat, KittyId, (T::AccountId, BalanceOf<T>), OptionQuery>;
+
 	// Pallets use events to inform users when important changes are made.
 	// https://docs.substrate.io/main-docs/build/events-errors/
 	#[pallet::event]
@@ -60,6 +69,8 @@ pub mod pallet {
 		KittyCreated { who: T::AccountId, kitty_id: KittyId, kitty:Kitty },
 		KittyBreed { who: T::AccountId, kitty_id: KittyId, kitty:Kitty },
 		KittyTransferred { who: T::AccountId, kitty_id: KittyId, to: T::AccountId },
+		KittyOnSale { owner: T::AccountId, kitty_id: KittyId, price: BalanceOf<T> },
+		KittySold { buyer: T::AccountId, kitty_id: KittyId, price: BalanceOf<T> },
 	}
 
 	// Errors inform users that something went wrong.
@@ -69,6 +80,8 @@ pub mod pallet {
 		InvalidKittyId,
 		SameKittyId,
 		NotOwner,
+		NotForSale,
+		InsufficientBalance,
 	}
 
 	// Dispatchable functions allows users to interact with the pallet and invoke state changes.
@@ -140,6 +153,45 @@ pub mod pallet {
 			KittyOwner::<T>::insert(kitty_id, &to);
 
 			Self::deposit_event(Event::KittyTransferred { who, kitty_id, to });
+
+			Ok(())
+		}
+
+		#[pallet::call_index(3)]
+		#[pallet::weight(10_000)]
+		pub fn sale(origin: OriginFor<T>, kitty_id: KittyId, price: BalanceOf<T>) -> DispatchResult {
+			let who = ensure_signed(origin)?;
+
+			ensure!(KittyOwner::<T>::contains_key(kitty_id), Error::<T>::InvalidKittyId);
+
+			let owner = Self::kitty_owner(kitty_id).ok_or(Error::<T>::InvalidKittyId)?;
+			ensure!(owner == who, Error::<T>::NotOwner);
+
+			KittySales::<T>::insert(kitty_id, (&who, price));
+
+			Self::deposit_event(Event::KittyOnSale { owner: who, kitty_id, price });
+
+			Ok(())
+		}
+
+		#[pallet::call_index(4)]
+		#[pallet::weight(10_000)]
+		pub fn buy(origin: OriginFor<T>, kitty_id: KittyId, price: BalanceOf<T>) -> DispatchResult {
+			let who = ensure_signed(origin)?;
+
+			let sale_detail = Self::kitty_sales(kitty_id).ok_or(Error::<T>::NotForSale)?;
+
+			ensure!(sale_detail.1 == price, Error::<T>::NotForSale);
+
+			let currency = T::Currency::free_balance(&who);
+			ensure!(currency >= price, Error::<T>::InsufficientBalance);
+
+			T::Currency::transfer(&who, &sale_detail.0, price, ExistenceRequirement::KeepAlive)?;
+
+			KittyOwner::<T>::insert(kitty_id, &who);
+			KittySales::<T>::remove(kitty_id);
+
+			Self::deposit_event(Event::KittySold { buyer: who, kitty_id, price });
 
 			Ok(())
 		}
